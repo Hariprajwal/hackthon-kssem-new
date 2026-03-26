@@ -24,6 +24,14 @@ class UserCreate(BaseModel):
     username: str
     password: str
 
+class ForgotPasswordRequest(BaseModel):
+    username: str
+    new_password: str
+
+class ResetPasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -94,3 +102,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     if user is None:
         raise credentials_exception
     return user
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Simple hackathon-level forgot password (no email verification)."""
+    user = db.query(models.User).filter(models.User.username == req.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.password = get_password_hash(req.new_password)
+    db.commit()
+    return {"status": "success", "message": "Password reset successfully"}
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordRequest, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Reset password for an authenticated user."""
+    if not verify_password(req.current_password, current_user.password):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    
+    current_user.password = get_password_hash(req.new_password)
+    db.commit()
+    return {"status": "success", "message": "Password updated successfully"}
