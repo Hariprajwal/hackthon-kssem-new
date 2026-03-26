@@ -1,47 +1,79 @@
-# CleanCodeX
+# 🚀 CleanCodeX: Intelligent Agentic IDE
 
-CleanCodeX is a powerful tool designed to enhance your coding experience by providing automated code formatting and intelligent linting suggestions.
+**Next-Gen Web-Based IDE with Real-Time AST Analysis, AI-Powered Fixes, and Integrated Python Execution.**
 
-## Features
+![CleanCodeX Dashboard](file:///C:/Users/harip/.gemini/antigravity/brain/72c6909c-e23a-4d87-b6f0-6cfb51830a0c/login_success_1774543673195.png)
 
-- **Code Editor**: A Monaco-based editor that feels like VS Code.
-- **Auto-Formatting**: One-click code formatting using Black.
-- **Intelligent Linting**: Real-time linting suggestions using Pylint.
-- **AI-Powered Suggestions**: Advanced code improvements suggested by AI.
+---
 
-## Getting Started
+## ✨ Features
 
-### Prerequisites
+### 🧠 Smart Analysis Engine (Version 3.0)
+- **Advanced AST Parser**: 9+ structural checks (bare excepts, naming conventions, long functions, mutable defaults, and more).
+- **Real-Time Debounced Linting**: Automatic analysis as you type (800ms debounce) using Pylint & AST markers.
+- **Monaco Markers (Squiggles)**: Professional IDE-grade underlines for errors, warnings, and info hints.
 
-- Node.js (v14 or higher)
-- Python (v3.8 or higher)
+### 🤖 AI Code Assistant
+- **AI-Powered Review**: Higher-level code quality insights via OpenRouter (Gemini 2.0 Flash).
+- **One-Click "Ask AI" Fixes**: Get structural explanations and code corrections for any detected issue.
+- **Auto-Fix All**: Instantly resolve all safe naming convention and formatting violations.
 
-### Installation
+### 💻 Professional Developer Experience
+- **Monaco Editor Integration**: 60+ Python autocomplete snippets, IntelliSense, and keyboard shortcuts (`Ctrl+Enter` to Run, `Ctrl+S` to Save).
+- **Integrated Terminal**: Live Python execution with stdout, stderr, and exit code tracking.
+- **Beautiful UX**: Sleek glassmorphism design, code quality scoring (0-100), and a dynamic Status Bar.
 
-1. Clone the repository.
-2. Install frontend dependencies:
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React, Monaco Editor, Lucide Icons, Axios, Tailwind-inspired Vanilla CSS.
+- **Backend**: FastAPI (Python), Uvicorn, Pydantic, SQLAlchemy.
+- **Database**: SQLite (SQLAlchemy ORM).
+- **Analysis**: AST (Abstract Syntax Trees), Pylint, Black (Formatter).
+- **AI Intelligence**: OpenRouter API (Gemini 2.0 Flash).
+
+---
+
+## 📸 Screenshots & Demos
+
+### 🖋️ Real-Time Intelligence
+Automatic squiggles and auto-complete snippets with tab-stop navigation.
+![Auto-Linting](file:///C:/Users/harip/.gemini/antigravity/brain/72c6909c-e23a-4d87-b6f0-6cfb51830a0c/code_linting_with_squiggles_1774543775056.png)
+
+### 🐚 Integrated Console
+Run Python code instantly and see live output in the built-in terminal.
+![Terminal Output](file:///C:/Users/harip/.gemini/antigravity/brain/72c6909c-e23a-4d87-b6f0-6cfb51830a0c/run_output_check_1774543962020.png)
+
+### 📽️ Full Flow Demo
+![IDE Walkthrough](file:///C:/Users/harip/.gemini/antigravity/brain/72c6909c-e23a-4d87-b6f0-6cfb51830a0c/final_ide_verification_1774543610244.webp)
+
+---
+
+## 🚀 Quick Start (Manual Launch)
+
+To start the full environment manually:
+
+1. **Unified Launch**:
    ```bash
-   cd frontend
-   npm install
+   python main.py
    ```
-3. Install backend dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+   *Launches Backend (8000) and Frontend (3005) simultaneously.*
 
-### Running the App
+2. **Separate Launch (Debug Mode)**:
+   - **Backend**: `uvicorn backend.app:app --port 8000 --reload`
+   - **Frontend**: `cd frontend && npm start` (Ensure `PORT=3005`)
 
-1. Start the backend:
-   ```bash
-   python backend/app.py
-   ```
-2. Start the frontend:
-   ```bash
-   cd frontend
-   npm start
-   ```
+### 🔑 Login Credentials:
+- **Username**: `tester`
+- **Password**: `password123`
 
-## Tech Stack
+---
 
-- **Frontend**: React, Monaco Editor, Axios, React Router.
-- **Backend**: FastAPI, Pylint, Black, OpenAI/OpenRouter.
+## 📈 Roadmap (Version 4.0)
+- [ ] AI Pull Request Generator (Summarize fixes into commit-ready PRs).
+- [ ] Research Mode (Deep-dive pattern explanations with docs).
+- [ ] Advanced Git Diff Explorer for Formatting.
+
+---
+Built for **KSSEM Hackathon 2026** 🏆
