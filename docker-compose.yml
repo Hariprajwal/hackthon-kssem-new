@@ -1,0 +1,14 @@
+services:
+  cleancodex:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./data/cleancodex.db
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES}
+    restart: always

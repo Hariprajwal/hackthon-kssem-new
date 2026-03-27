@@ -55,6 +55,12 @@ app.include_router(execute.router, prefix="/api/execute", tags=["execute"])
 app.include_router(auth.router,    prefix="/api/auth",    tags=["auth"])
 app.include_router(files.router,   prefix="/api/files",   tags=["files"])
 
+# Serve Static Frontend (built by Docker) at root last
+import os
+from fastapi.staticfiles import StaticFiles
+if os.path.exists("static"):
+    app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

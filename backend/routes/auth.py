@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -9,9 +10,9 @@ from .. import models
 from pydantic import BaseModel, EmailStr
 
 # Configuration
-SECRET_KEY = "HACKATHON_SECRET_KEY_CHANGE_THIS"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = os.getenv("JWT_SECRET", "HACKATHON_SECRET_KEY_CHANGE_THIS")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "30"))
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
@@ -21,7 +22,6 @@ router = APIRouter()
 import random
 import smtplib
 from email.mime.text import MIMEText
-import os
 
 OTP_STORE = {}
 
