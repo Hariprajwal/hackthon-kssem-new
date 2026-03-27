@@ -142,16 +142,100 @@ def analyze_ast(code: str):
                                     "symbol": "global-naming"
                                 })
 
-    # ── 9. Long lines (> 79 chars) ────────────────────────────────────────────
-    for i, line in enumerate(lines, start=1):
-        if len(line) > 79:
-            issues.append({
-                "line": i,
-                "column": 80,
-                "message": f"Line {i} is {len(line)} characters (PEP8 max is 79).",
-                "type": "info",
-                "symbol": "line-too-long"
-            })
+    # ── 10. Missing imports / undefined names ────────────────────────────────
+    # Collect all names that are DEFINED (Store context: assigned, imported, function/class defs)
+    defined_names: set = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                defined_names.add(alias.asname or alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name != "*":
+                    defined_names.add(alias.asname or alias.name)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            defined_names.add(node.name)
+            for arg in node.args.args + node.args.posonlyargs + node.args.kwonlyargs:
+                defined_names.add(arg.arg)
+            if node.args.vararg:
+                defined_names.add(node.args.vararg.arg)
+            if node.args.kwarg:
+                defined_names.add(node.args.kwarg.arg)
+        elif isinstance(node, ast.ClassDef):
+            defined_names.add(node.name)
+        elif isinstance(node, ast.Global):
+            defined_names.update(node.names)
+        elif isinstance(node, ast.NamedExpr):
+            defined_names.add(node.target.id)
+        # Only collect STORE-context names (LHS of assignment, loop vars, etc.)
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            defined_names.add(node.id)
+
+    # Python builtins — always available
+    _BUILTINS = set(dir(__builtins__)) if isinstance(__builtins__, dict) else set(dir(__builtins__))
+    _BUILTINS.update({
+        "True", "False", "None", "print", "len", "range", "int", "str", "list", "dict",
+        "set", "tuple", "type", "isinstance", "issubclass", "hasattr", "getattr", "setattr",
+        "delattr", "callable", "super", "object", "property", "classmethod", "staticmethod",
+        "open", "input", "map", "filter", "zip", "enumerate", "sorted", "reversed", "any",
+        "all", "min", "max", "sum", "abs", "round", "pow", "hash", "id", "hex", "oct", "bin",
+        "chr", "ord", "repr", "vars", "dir", "help", "exit", "quit", "self", "cls",
+        "__name__", "__file__", "__doc__", "__package__", "__spec__", "__import__",
+        "__builtins__", "__annotations__", "__all__", "__slots__", "__dict__", "__class__",
+        "NotImplemented", "Ellipsis", "__debug__",
+    })
+
+    # Walk again looking for Name loads that aren't defined
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+            name = node.id
+            if name not in defined_names and name not in _BUILTINS:
+                issues.append({
+                    "line":    node.lineno,
+                    "column":  node.col_offset + 1,
+                    "message": (
+                        f"'{name}' is used but not imported or defined. "
+                        f"Add 'import {name}' or 'from <module> import {name}' at the top."
+                    ),
+                    "type":   "error",
+                    "symbol": "undefined-name",
+                })
+
+    # ── 11. Environment Awareness (Venv / Missing Packages) ──────────────────
+    import importlib.util
+    import sys
+
+    # Collect base modules being imported (e.g. "PyQt6" from "from PyQt6.QtWidgets import ...")
+    imported_base_modules = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imported_base_modules.add((alias.name.split(".")[0], getattr(node, "lineno", 1), getattr(node, "col_offset", 0)))
+        elif isinstance(node, ast.ImportFrom):
+            if node.module and node.level == 0: # Only check absolute imports
+                imported_base_modules.add((node.module.split(".")[0], getattr(node, "lineno", 1), getattr(node, "col_offset", 0)))
+
+    env_path = sys.prefix
+    for module_name, lineno, col in imported_base_modules:
+        if module_name in _BUILTINS or module_name in sys.builtin_module_names:
+            continue
+        try:
+            # Check if the module exists in the current Python environment
+            spec = importlib.util.find_spec(module_name)
+            if spec is None:
+                issues.append({
+                    "line":    lineno,
+                    "column":  col + 1,
+                    "message": (
+                        f"Environment Warning: '{module_name}' is not installed in the active environment "
+                        f"({env_path}). If you installed it globally or in a venv, ensure the backend "
+                        f"server is running using that specific Python interpreter."
+                    ),
+                    "type":   "error",
+                    "symbol": "missing-environment-package",
+                })
+        except Exception:
+            pass # Ignore malformed import strings or find_spec failures
 
     # Deduplicate by (line, symbol) to avoid noise
     seen = set()
@@ -163,6 +247,7 @@ def analyze_ast(code: str):
             unique.append(issue)
 
     return unique
+
 
 
 def auto_fix(code: str, issues: list) -> str:

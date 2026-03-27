@@ -18,11 +18,22 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 router = APIRouter()
 
+import random
+import smtplib
+from email.mime.text import MIMEText
+import os
+
+OTP_STORE = {}
+
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
     username: str
     password: str
+    otp: str
+
+class SendOTPRequest(BaseModel):
+    email: EmailStr
 
 class ForgotPasswordRequest(BaseModel):
     username: str
@@ -52,8 +63,35 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+@router.post("/send-otp")
+async def send_otp(req: SendOTPRequest):
+    otp = str(random.randint(100000, 999999))
+    OTP_STORE[req.email] = otp
+    print(f"\n[{datetime.utcnow().isoformat()}] 🚀 HACKATHON OTP GENERATED FOR {req.email}: {otp}\n")
+    
+    # Try sending real email if configured
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_pass = os.getenv("SMTP_PASS")
+    if smtp_user and smtp_pass:
+        try:
+            msg = MIMEText(f"Your CleanCodeX verification code is: {otp}")
+            msg['Subject'] = "CleanCodeX Verification Code"
+            msg['From'] = smtp_user
+            msg['To'] = req.email
+            
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(smtp_user, req.email, msg.as_string())
+        except Exception as e:
+            print(f"SMTP Error: {e} (OTP was {otp})")
+            
+    return {"status": "success", "message": "OTP sent continuously to your email (check console if SMTP not configured)."}
+
 @router.post("/register", response_model=Token)
 async def register(user: UserCreate, db: Session = Depends(get_db)):
+    if OTP_STORE.get(user.email) != user.otp:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP.")
+    
     db_user = db.query(models.User).filter(
         (models.User.username == user.username) | (models.User.email == user.email)
     ).first()

@@ -5,7 +5,7 @@ import os
 
 def run_backend():
     print("🚀 Starting FastAPI Backend...")
-    return subprocess.Popen([sys.executable, "-m", "uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"])
+    return subprocess.Popen([sys.executable, "backend/server.py"])
 
 def run_frontend():
     print("🌐 Starting React Frontend on port 3005...")
