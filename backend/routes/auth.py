@@ -71,7 +71,7 @@ async def send_otp(req: SendOTPRequest):
     
     # Try sending real email if configured
     smtp_user = os.getenv("SMTP_USER")
-    smtp_pass = os.getenv("SMTP_PASS")
+    smtp_pass = (os.getenv("SMTP_PASS") or "").replace(" ", "")
     if smtp_user and smtp_pass:
         try:
             msg = MIMEText(f"Your CleanCodeX verification code is: {otp}")
