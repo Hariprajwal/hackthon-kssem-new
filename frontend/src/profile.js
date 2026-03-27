@@ -4,7 +4,7 @@ import axios from 'axios';
 import { User, Lock, Key, ArrowLeft } from 'lucide-react';
 import './profile.css';
 
-const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'http://127.0.0.1:8000/api';
+const API_BASE = process.env.NODE_ENV === 'production' ? 'https://hackthon-kssem-new.onrender.com/api' : 'http://127.0.0.1:8000/api';
 const getToken = () => localStorage.getItem('token');
 const logout = () => { localStorage.removeItem('token'); window.location.href = '/login'; };
 

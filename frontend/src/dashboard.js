@@ -8,7 +8,7 @@ import Navbar from './components/navbar';
 import ProfilePage from './profile';
 import './dashboard.css';
 
-const API = process.env.NODE_ENV === 'production' ? '/api' : 'http://127.0.0.1:8000/api';
+const API = process.env.NODE_ENV === 'production' ? 'https://hackthon-kssem-new.onrender.com/api' : 'http://127.0.0.1:8000/api';
 const getToken = () => localStorage.getItem('token');
 const authHeaders = () => ({ Authorization: `Bearer ${getToken()}` });
 
@@ -70,7 +70,7 @@ const Dashboard = () => {
 
   const checkBackend = async () => {
     try {
-      await axios.get(process.env.NODE_ENV === 'production' ? '/' : 'http://127.0.0.1:8000/');
+      await axios.get(process.env.NODE_ENV === 'production' ? 'https://hackthon-kssem-new.onrender.com/' : 'http://127.0.0.1:8000/');
       setBackendStatus('connected');
     } catch { setBackendStatus('offline'); }
   };
