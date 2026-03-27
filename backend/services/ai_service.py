@@ -167,24 +167,24 @@ def get_ai_fix(code: str, issue: dict) -> dict:
         f"== CONTEXT: FULL CODE (READ ONLY) ==\n"
         f"```python\n{context_code}\n```\n\n"
         f"INSTRUCTIONS:\n"
-        f"1. AVOID 'MULTI-LAYER CONFUSION': This code is isolated. Do not fix logic across imaginary boundaries (e.g., UI vs OS handling). Fix ONLY the specific error requested.\n"
-        f"2. AVOID 'STATIC VS RUNTIME CONFUSION': This is a static analysis error (e.g., import-error, undefined-variable from Pylint/AST). Do NOT try to 'fix' the logic if the issue is just a missing setup or import.\n"
-        f"3. FIX IMPORT STYLES: If the error is an undefined variable like `QVBoxLayout()` but `from PyQt6 import QtWidgets` exists, you MUST explicitly import it like `from PyQt6.QtWidgets import QVBoxLayout`.\n"
-        f"4. HOW TO REPLY: You must reply with an EXACT SEARCH/REPLACE block. The SEARCH section must match the existing code EXACTLY, character for character.\n\n"
+        f"1. AVOID 'MULTI-LAYER CONFUSION': This code is isolated. Do not fix logic across boundaries. Fix ONLY the specific error requested.\n"
+        f"2. FIX IMPORT STYLES: If the error is an undefined variable like `QVBoxLayout()` but `from PyQt6 import QtWidgets` exists, explicitly import it instead of rewriting code.\n"
+        f"3. NO HALLUCINATION: The SEARCH block MUST perfectly match the indentation and exact text of the existing 1-5 lines surrounding the error.\n"
+        f"4. VALID PYTHON ONLY: The REPLACE block MUST contain ONLY valid python code. Do not include markdown or explanations inside the REPLACE block.\n"
+        f"5. HOW TO REPLY: You must reply with an EXACT SEARCH/REPLACE block. Keep the block as small as possible (1-5 lines max).\n\n"
         f"Reply EXACTLY in this format:\n"
         f"EXPLANATION: [One concise sentence explaining why you changed this]\n"
         f"FIX_BLOCK:\n"
         f"<<<<\n"
         f"[exact lines from the original code to replace]\n"
         f"====\n"
-        f"[new lines to insert]\n"
+        f"[new valid python lines to insert]\n"
         f">>>>\n"
     )
 
     system = (
         "You are an elite Python engineer specialized in targeted, surgical bug fixes. "
-        "You understand that environment differences (OS, missing packages) and static linter errors (undefined variables) require environment/import fixes, not logic rewrites. "
-        "Strict adherence to instructions is mandatory. Never return the full file."
+        "Strict adherence to instructions and valid syntax is mandatory. Do not output conversational text outside the designated EXPLANATION block."
     )
 
     try:
@@ -196,10 +196,10 @@ def get_ai_fix(code: str, issue: dict) -> dict:
 
         # 1. Extract explanation
         exp_match = re.search(r"EXPLANATION:\s*(.+?)(?:\n|$)", raw, re.IGNORECASE)
-        explanation = exp_match.group(1).strip() if exp_match else "Fix applied."
+        explanation = exp_match.group(1).strip() if exp_match else "Targeted fix applied."
 
         # 2. Extract SEARCH/REPLACE blocks
-        fix_match = re.search(r"<<<<\n(.*?)\n====\n(.*?)\n>>>>", raw, re.DOTALL | re.IGNORECASE)
+        fix_match = re.search(r"<<<<.*?\n(.*?)\n====.*?\n(.*?)\n>>>>", raw, re.DOTALL | re.IGNORECASE)
         
         fixed_full_code = code
         diff_hint = f"Fixed line {line_no}: {message}"
@@ -209,11 +209,37 @@ def get_ai_fix(code: str, issue: dict) -> dict:
             replace_text = fix_match.group(2)
             
             if search_text in code:
+                # Exact match works flawlessly
                 fixed_full_code = code.replace(search_text, replace_text, 1)
             else:
-                explanation += " (AI hallucinated exact match; fallback to raw replace attempt.)"
-                # Fuzzy fallback or basic append for demo purposes
-                fixed_full_code = replace_text + "\n" + code
+                # Fuzzy match fallback: line-by-line sequence matching ignoring leading/trailing spaces
+                src_lines = code.split('\n')
+                search_lines = [line.strip() for line in search_text.split('\n') if line.strip()]
+                
+                if not search_lines:
+                    explanation += " (AI hallucinated empty SEARCH block. Fix aborted.)"
+                else:
+                    best_match_idx = -1
+                    for i in range(len(src_lines) - len(search_lines) + 1):
+                        match_count = 0
+                        for j in range(len(search_lines)):
+                            if src_lines[i + j].strip() == search_lines[j]:
+                                match_count += 1
+                            else:
+                                break
+                        if match_count == len(search_lines):
+                            best_match_idx = i
+                            break
+                    
+                    if best_match_idx != -1:
+                        # Splice the fuzzy match
+                        # Replace [best_match_idx : best_match_idx + len(search_lines)] with replace_text
+                        prefix = src_lines[:best_match_idx]
+                        suffix = src_lines[best_match_idx + len(search_lines):]
+                        fixed_full_code = '\n'.join(prefix + replace_text.split('\n') + suffix)
+                        explanation += " (Fuzzy space match used.)"
+                    else:
+                        explanation += " (AI hallucinatory mismatch. Safety block engaged: code untouched to prevent corruption.)"
         else:
             explanation = "AI fix format failed."
 
