@@ -1,3 +1,7 @@
-from backend.app import app
+import sys
+import os
 
-# Vercel serverless functions require the ASGI app to be exposed as `app`
+# Add the project root to sys.path so 'backend' package is importable in Vercel
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from backend.app import app  # noqa: E402 — Vercel looks for 'app' in this file
