@@ -164,21 +164,21 @@ def get_ai_fix(code: str, issue: dict) -> dict:
         f"Python Static Analysis Issue on line {line_no}:\n"
         f"Error: {message} [{symbol}]\n\n"
         f"{env_context}\n"
-        f"== TARGET: BLOCK TO FIX (Lines {win_start+1}–{win_end}) ==\n"
-        f"```python\n{block}\n```\n\n"
         f"== CONTEXT: FULL CODE (READ ONLY) ==\n"
         f"```python\n{context_code}\n```\n\n"
         f"INSTRUCTIONS:\n"
         f"1. AVOID 'MULTI-LAYER CONFUSION': This code is isolated. Do not fix logic across imaginary boundaries (e.g., UI vs OS handling). Fix ONLY the specific error requested.\n"
         f"2. AVOID 'STATIC VS RUNTIME CONFUSION': This is a static analysis error (e.g., import-error, undefined-variable from Pylint/AST). Do NOT try to 'fix' the logic if the issue is just a missing setup or import.\n"
         f"3. FIX IMPORT STYLES: If the error is an undefined variable like `QVBoxLayout()` but `from PyQt6 import QtWidgets` exists, you MUST explicitly import it like `from PyQt6.QtWidgets import QVBoxLayout`.\n"
-        f"4. AVOID 'CONTEXT LIMIT' TRUNCATION: Do NOT return the full file. Return exactly {win_end - win_start} lines for the TARGET BLOCK. If you add an import, place it at the top of the TARGET BLOCK if appropriate, or fix the reference directly.\n\n"
+        f"4. HOW TO REPLY: You must reply with an EXACT SEARCH/REPLACE block. The SEARCH section must match the existing code EXACTLY, character for character.\n\n"
         f"Reply EXACTLY in this format:\n"
         f"EXPLANATION: [One concise sentence explaining why you changed this]\n"
-        f"FIXED_BLOCK:\n"
-        f"```python\n"
-        f"[Paste the fixed TARGET BLOCK here]\n"
-        f"```"
+        f"FIX_BLOCK:\n"
+        f"<<<<\n"
+        f"[exact lines from the original code to replace]\n"
+        f"====\n"
+        f"[new lines to insert]\n"
+        f">>>>\n"
     )
 
     system = (
@@ -198,27 +198,29 @@ def get_ai_fix(code: str, issue: dict) -> dict:
         exp_match = re.search(r"EXPLANATION:\s*(.+?)(?:\n|$)", raw, re.IGNORECASE)
         explanation = exp_match.group(1).strip() if exp_match else "Fix applied."
 
-        # 2. Extract fixed block — look for ```python ... ``` after FIXED_BLOCK:
-        blk_match = re.search(
-            r"FIXED_BLOCK[:\s]*```python\s*\n(.*?)\n```",
-            raw,
-            re.DOTALL | re.IGNORECASE,
-        )
-        if blk_match:
-            fixed_block_lines = blk_match.group(1).splitlines()
+        # 2. Extract SEARCH/REPLACE blocks
+        fix_match = re.search(r"<<<<\n(.*?)\n====\n(.*?)\n>>>>", raw, re.DOTALL | re.IGNORECASE)
+        
+        fixed_full_code = code
+        diff_hint = f"Fixed line {line_no}: {message}"
+        
+        if fix_match:
+            search_text = fix_match.group(1)
+            replace_text = fix_match.group(2)
+            
+            if search_text in code:
+                fixed_full_code = code.replace(search_text, replace_text, 1)
+            else:
+                explanation += " (AI hallucinated exact match; fallback to raw replace attempt.)"
+                # Fuzzy fallback or basic append for demo purposes
+                fixed_full_code = replace_text + "\n" + code
         else:
-            # Fallback: grab any ```python ... ``` in the response
-            any_block = re.search(r"```python\s*\n(.*?)\n```", raw, re.DOTALL)
-            fixed_block_lines = any_block.group(1).splitlines() if any_block else block.splitlines()
-
-        # 3. Splice the fixed block back into the full file
-        new_lines = lines[:win_start] + fixed_block_lines + lines[win_end:]
-        fixed_full_code = "\n".join(new_lines)
+            explanation = "AI fix format failed."
 
         return {
             "explanation": explanation,
             "fixed_code":  fixed_full_code,
-            "diff_hint":   f"Fixed line {line_no}: {message}",
+            "diff_hint":   diff_hint,
         }
 
     except Exception as exc:
